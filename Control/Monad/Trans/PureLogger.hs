@@ -2,11 +2,19 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE CPP #-}
+#if MIN_VERSION_monad_logger(0,3,8)
+#else
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-module Control.Monad.Trans.PureLogger where
+#endif
+module Control.Monad.Trans.PureLogger (
+    module Control.Monad.Trans.PureLogger
+#if MIN_VERSION_monad_logger(0,3,8)
+    , NoLoggingT(..)
+#endif
+    ) where
 
 import Control.Monad.Trans.State.Lazy
 import Control.Monad.Trans.Class
@@ -16,6 +24,9 @@ import Data.Foldable                        (toList)
 import Data.Monoid                          (Monoid, mempty)
 import System.Log.FastLogger                (LogStr, toLogStr)
 
+#if MIN_VERSION_monad_logger(0,3,8)
+import Control.Monad.Logger                 (NoLoggingT(..), runNoLoggingT)
+#else
 import Control.Monad (liftM, ap)
 import Control.Applicative                  (pure, (<*>))
 import qualified Control.Monad.Trans.Class as Trans
@@ -34,6 +45,8 @@ import Control.Monad.Catch (MonadCatch (..)
     , MonadMask (..)
 #endif
     )
+#endif
+
 #endif
 
 import Data.Sequence                        (Seq)
@@ -75,6 +88,8 @@ instance (QuickAppendable t, Monad m) => MonadLogger (PureLoggingT t m) where
 runPureLoggingT :: Monoid (t LogStr) => PureLoggingT t m a -> m (a, t LogStr)
 runPureLoggingT = flip runStateT mempty . unPureLoggingT
 
+#if MIN_VERSION_monad_logger(0,3,8)
+#else
 -- Workaround only
 -- The following about NoLoggingT is copied from monad-logger project
 -- It is here because monad-logger requires:
@@ -146,3 +161,4 @@ instance MonadBaseControl b m => MonadBaseControl b (NoLoggingT m) where
 
 instance Monad m => MonadLogger (NoLoggingT m) where
     monadLoggerLog _ _ _ _ = return ()
+#endif

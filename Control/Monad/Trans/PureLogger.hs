@@ -21,8 +21,8 @@ import Control.Monad.Trans.Class
 import Control.Monad.Logger hiding (NoLoggingT, runNoLoggingT)
 import Control.Applicative                  (Applicative)
 import Data.Foldable                        (toList)
-import Data.Monoid                          (Monoid, mempty)
 import System.Log.FastLogger                (LogStr, toLogStr)
+import Data.Functor.Identity                (Identity(..))
 
 #if MIN_VERSION_monad_logger(0,3,8)
 import Control.Monad.Logger                 (NoLoggingT(..), runNoLoggingT)
@@ -85,8 +85,17 @@ instance (QuickAppendable t, Monad m) => MonadLogger (PureLoggingT t m) where
         PureLoggingT $ modify $ qappend $
                     defaultLogStr loc src level $ toLogStr msg
 
-runPureLoggingT :: Monoid (t LogStr) => PureLoggingT t m a -> m (a, t LogStr)
-runPureLoggingT = flip runStateT mempty . unPureLoggingT
+runPureLoggingT :: t LogStr -> PureLoggingT t m a -> m (a, t LogStr)
+runPureLoggingT init_s = flip runStateT init_s . unPureLoggingT
+
+-- | run pure code with logging facilities
+runPureLoggingT' :: PureLoggingT [] Identity a -> (a, [LogStr])
+runPureLoggingT' f = (x, ascList logs)
+    where (x, logs) = runIdentity $ runPureLoggingT [] f
+
+-- | run pure code, discard its logs
+runPureNoLoggingT :: NoLoggingT Identity a -> a
+runPureNoLoggingT = runIdentity . runNoLoggingT
 
 #if MIN_VERSION_monad_logger(0,3,8)
 #else
